@@ -7,7 +7,7 @@ import { formatMoney, plural } from '../lib/money'
 import { prettyMerchant, type Account } from '../lib/model'
 import { balanceSeries, byCategory, inPeriod, insights, pace, recurring, totals } from '../lib/stats'
 import {
-  balances, data, openSheet, setSettings, statsOffset, syncError, syncNow, syncing, tab, totalBalance
+  balances, data, openSheet, pasteSmsFromClipboard, setSettings, statsOffset, syncError, syncNow, syncing, tab, totalBalance
 } from '../state'
 import { AreaChart, StackBar } from './charts'
 import { Icon } from './icons'
@@ -27,6 +27,10 @@ export function TopBar({ title }: { title?: string }) {
         </span>
       )}
       <div class="topbar-actions">
+        <button class="icon-btn" aria-label="Записать SMS из буфера"
+          onClick={async () => { haptic(); if (!(await pasteSmsFromClipboard())) openSheet({ type: 'paste' }) }}>
+          <Icon name="message" size={20} />
+        </button>
         {s && (
           <button class={`icon-btn${syncing.value ? ' is-spin' : ''}`} aria-label="Обновить из SMS"
             onClick={() => { haptic(); void syncNow(true) }}>
@@ -120,6 +124,17 @@ export function Home() {
           <Icon name="plus" size={18} />
         </button>
       </div>
+
+      {d.txs.every(t => t.src !== 'sms') && (
+        <button class="callout" onClick={async () => { haptic(); if (!(await pasteSmsFromClipboard())) openSheet({ type: 'paste' }) }}>
+          <Icon name="copy" size={22} />
+          <span>
+            <b>Записать SMS банка</b>
+            <small>Скопируйте SMS в «Сообщениях» (долгое нажатие → «Скопировать») и нажмите сюда. Значок сообщения вверху делает то же самое.</small>
+          </span>
+          <Icon name="right" size={18} />
+        </button>
+      )}
 
       {!s.sync && (
         <button class="callout" onClick={() => { haptic(); openSheet({ type: 'sync' }) }}>

@@ -326,3 +326,25 @@ export function removeTestArtifacts() {
     return { ...d, txs, accounts }
   })
 }
+
+/** Записать SMS из буфера обмена одной кнопкой. Возвращает false, если буфер прочитать не удалось. */
+export async function pasteSmsFromClipboard(): Promise<boolean> {
+  let text = ''
+  try {
+    text = await navigator.clipboard.readText()
+  } catch {
+    return false
+  }
+  const parts = text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean)
+  if (!parts.length || !parts.some(p => parseSms(p).ok || /KARTA|OSTATOK/i.test(p))) {
+    showToast('В буфере нет SMS банка. Скопируйте её в «Сообщениях»: долгое нажатие → «Скопировать»')
+    return true
+  }
+  const report = ingestItems(parts.map(p => ({ text: p })))
+  const ids = new Set(report.added.map(t => t.id))
+  showToast(reportText(report), {
+    tone: report.added.length ? 'good' : undefined,
+    action: ids.size ? { label: 'Отменить', run: () => { update(d => ({ ...d, txs: d.txs.filter(t => !ids.has(t.id)) })); hideToast() } } : undefined
+  })
+  return true
+}
