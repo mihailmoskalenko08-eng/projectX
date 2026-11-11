@@ -7,6 +7,7 @@ import { haptic } from '../lib/haptic'
 import { plural } from '../lib/money'
 import { defaultData, type Theme } from '../lib/model'
 import { recurring } from '../lib/stats'
+import { applyImport, isImportFile } from '../lib/statement'
 import { balances, clearDemo, data, flushSave, hasDemo, loadDemo, openSheet, setSettings, showToast, syncError } from '../state'
 import { TopBar } from './Home'
 import { Money, Row, Segmented, Switch } from './ui'
@@ -15,6 +16,27 @@ export function More() {
   const d = data.value
   const s = d.settings
   const file = useRef<HTMLInputElement>(null)
+  const stmt = useRef<HTMLInputElement>(null)
+
+  const onStatement = async (e: Event) => {
+    const input = e.target as HTMLInputElement
+    const f = input.files?.[0]
+    input.value = ''
+    if (!f) return
+    try {
+      const raw = JSON.parse(await f.text())
+      if (!isImportFile(raw)) throw new Error('Это не файл выписки для «Копейки»')
+      const { data: next, report } = applyImport(data.value, raw)
+      data.value = next
+      flushSave()
+      const n = report.added.length
+      showToast(n
+        ? `Добавлено ${n} ${plural(n, ['операция', 'операции', 'операций'])}${report.duplicates ? `, повторов пропущено: ${report.duplicates}` : ''}`
+        : 'Все операции из файла уже есть', { tone: n ? 'good' : undefined, ms: 4000 })
+    } catch (err) {
+      showToast(err instanceof SyntaxError ? 'Файл повреждён' : (err as Error).message, { tone: 'bad' })
+    }
+  }
   const recCount = recurring(d).length
   const since = d.txs.length ? d.txs[d.txs.length - 1].at : null
   const rulesCount = Object.keys(d.rules).length
@@ -70,7 +92,7 @@ export function More() {
         {d.accounts.map(a => (
           <Row key={a.id} icon={a.kind === 'cash' ? 'cash' : a.kind === 'savings' ? 'savings' : 'card'} color={a.archived ? '#555' : a.color}
             title={<>{a.name}{a.archived && <small class="muted"> · архив</small>}</>}
-            sub={a.last4 ? `•• ${a.last4}${a.snap ? ' · остаток из SMS' : ''}` : a.kind === 'cash' ? 'Наличные' : a.kind === 'savings' ? 'Копилка' : 'Карта'}
+            sub={a.last4 ? `•• ${a.last4}${a.snap ? ' · остаток из банка' : ''}` : a.kind === 'cash' ? 'Наличные' : a.kind === 'savings' ? 'Копилка' : 'Карта'}
             right={<Money value={balances.value.get(a.id) ?? 0} cur={a.currency} />}
             onClick={() => openSheet({ type: 'account', id: a.id })} />
         ))}
@@ -115,12 +137,14 @@ export function More() {
         <Row icon="upload" title="Сохранить копию" sub="Файл со всеми данными — на случай смены телефона"
           onClick={() => { download(`kopeyka-${dayKey(Date.now())}.json`, exportJson(d), 'application/json'); setSettings({}) }} />
         <Row icon="download" title="Загрузить копию" onClick={() => file.current?.click()} />
+        <Row icon="receipt" title="Загрузить выписку" sub="Операции из выписки банка добавятся к текущим, без повторов" onClick={() => stmt.current?.click()} />
         <Row icon="receipt" title="Выгрузить в таблицу" sub="CSV для Excel и Numbers" onClick={() => download(`kopeyka-${dayKey(Date.now())}.csv`, exportCsv(d), 'text/csv')} />
         {hasDemo.value
           ? <Row icon="sparkles" title="Убрать демо-данные" sub="Настоящие операции останутся" onClick={() => { clearDemo(); showToast('Демо-данные убраны') }} />
           : <Row icon="sparkles" title="Показать на демо-данных" sub="Три месяца примерной жизни — посмотреть, как всё выглядит" onClick={() => { loadDemo(); showToast('Демо-данные загружены', { tone: 'good' }) }} />}
         <Row icon="trash" title="Удалить всё" danger onClick={wipe} />
         <input ref={file} type="file" accept="application/json,.json" hidden onChange={onFile} />
+        <input ref={stmt} type="file" accept="application/json,.json,.kopeyka" hidden onChange={onStatement} />
       </section>
 
       <p class="footnote">
