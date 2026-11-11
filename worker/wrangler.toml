@@ -1,0 +1,9 @@
+# Для тех, кто разворачивает через командную строку: npx wrangler deploy
+# Перед этим создайте хранилище: npx wrangler kv namespace create INBOX — и вставьте его id ниже.
+name = "kopeyka-inbox"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+[[kv_namespaces]]
+binding = "INBOX"
+id = "ВСТАВЬТЕ_ID_ХРАНИЛИЩА"
