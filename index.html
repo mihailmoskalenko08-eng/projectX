@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ru" data-theme="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Копейка</title>
+  <meta name="description" content="Расходы и доходы, которые записываются сами из SMS банка. Бюджет, прогноз, аналитика." />
+  <meta name="theme-color" content="#111412" />
+  <meta name="color-scheme" content="dark light" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Копейка" />
+  <meta name="format-detection" content="telephone=no" />
+  <link rel="icon" href="/projectX/icons/icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/projectX/icons/apple-touch-icon.png" />
+  <script>
+    // Тема до первой отрисовки — без белой вспышки ночью
+    try {
+      var d = JSON.parse(localStorage.getItem('kopeyka:v1') || 'null')
+      var t = d && d.settings && d.settings.theme
+      var dark = t === 'dark' || (t !== 'light' && matchMedia('(prefers-color-scheme: dark)').matches)
+      document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light')
+      if (!dark) document.querySelector('meta[name="theme-color"]').setAttribute('content', '#F2F3EF')
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div id="root"></div>
+  <noscript>Для «Копейки» нужен включённый JavaScript.</noscript>
+  <script type="module" src="/src/main.tsx"></script>
+</body>
+</html>
