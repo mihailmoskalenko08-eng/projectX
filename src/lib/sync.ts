@@ -23,17 +23,31 @@ export function inboxUrl(s: SyncSettings): string {
   return `${normalizeUrl(s.url)}/in/${s.key}`
 }
 
-async function call(url: string, init: RequestInit = {}, timeout = 12000): Promise<Response> {
+async function attempt(url: string, init: RequestInit, timeout: number): Promise<Response> {
   const ctl = new AbortController()
   const t = setTimeout(() => ctl.abort(), timeout)
   try {
     return await fetch(url, { ...init, signal: ctl.signal, cache: 'no-store' })
-  } catch (e) {
-    if ((e as Error).name === 'AbortError') throw new Error('Сервер не ответил вовремя')
-    throw new Error('Нет связи с сервером')
   } finally {
     clearTimeout(t)
   }
+}
+
+/** Запрос к серверу. На медленном мобильном интернете один сбой — не повод сдаваться: повторяем ещё дважды. */
+async function call(url: string, init: RequestInit = {}, timeout = 15000): Promise<Response> {
+  let last: unknown
+  for (let i = 0; i < 3; i++) {
+    try {
+      return await attempt(url, init, timeout)
+    } catch (e) {
+      last = e
+      await new Promise(r => setTimeout(r, 800 * (i + 1)))
+    }
+  }
+  const e = last as Error
+  if (e?.name === 'AbortError') throw new Error('Сервер не ответил вовремя — проверьте интернет')
+  const detail = e?.message ? ` (${e.message})` : ''
+  throw new Error(`Нет связи с сервером${detail}. Если адрес открывается в Safari, отключите блокировщики контента для этого сайта`)
 }
 
 export interface ServerInfo {
