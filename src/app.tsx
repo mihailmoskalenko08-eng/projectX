@@ -74,8 +74,8 @@ export function App() {
   const d = data.value
   const t = tab.value
 
-  // Смена вкладки — наверх
-  useEffect(() => { window.scrollTo({ top: 0 }) }, [t])
+  // Смена вкладки или выход с приветственного экрана — наверх
+  useEffect(() => { window.scrollTo({ top: 0 }) }, [t, d.settings.onboarded])
 
   if (!d.settings.onboarded) {
     return (
