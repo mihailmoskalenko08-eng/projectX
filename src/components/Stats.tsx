@@ -7,7 +7,7 @@ import { formatMoney, plural } from '../lib/money'
 import { prettyMerchant } from '../lib/model'
 import { byCategory, cumulative, dailySpend, inPeriod, topMerchants, totals, weekdayPattern } from '../lib/stats'
 import { categoryOf, data, openSheet, statsKind, statsOffset } from '../state'
-import { DayBars, Donut, PaceChart, WeekBars } from './charts'
+import { DayBars, Donut, groupSmall, PaceChart, REST_ID, WeekBars } from './charts'
 import { TopBar } from './Home'
 import { Icon } from './icons'
 import { CatIcon, CountUp, Empty, Money, Segmented } from './ui'
@@ -65,8 +65,18 @@ export function Stats() {
 
       {cats.length ? (
         <section class="block donut-block">
-          <Donut parts={cats.map(c => ({ id: c.cat.id, value: c.amount, color: c.cat.color }))} selected={sel} onSelect={setSel}>
-            {selCat ? (
+          <Donut parts={groupSmall(cats.map(c => ({ id: c.cat.id, value: c.amount, color: c.cat.color })))} selected={sel} onSelect={setSel}>
+            {sel === REST_ID ? (() => {
+              const rest = cats.filter(c => c.share < 0.03)
+              const sum = rest.reduce((a, c) => a + c.amount, 0)
+              return (
+                <>
+                  <span class="donut-label">Остальное</span>
+                  <Money value={sum} big class="donut-value" cents="never" />
+                  <span class="donut-sub">{rest.length} {plural(rest.length, ['категория', 'категории', 'категорий'])} · {Math.round((sum / total) * 100)}%</span>
+                </>
+              )
+            })() : selCat ? (
               <>
                 <span class="donut-label">{selCat.cat.name}</span>
                 <Money value={selCat.amount} big class="donut-value" cents="never" />
@@ -86,7 +96,7 @@ export function Stats() {
           </Donut>
           <div class="legend">
             {cats.map(c => (
-              <button key={c.cat.id} class={`legend-row${sel === c.cat.id ? ' is-sel' : ''}`}
+              <button key={c.cat.id} class={`legend-row${sel === c.cat.id || (sel === REST_ID && c.share < 0.03) ? ' is-sel' : ''}`}
                 onClick={() => { haptic(); openSheet({ type: 'category', id: c.cat.id, offset: off }) }}>
                 <CatIcon icon={c.cat.icon} color={c.cat.color} size={38} />
                 <span class="legend-main">
